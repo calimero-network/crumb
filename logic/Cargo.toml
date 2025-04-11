@@ -24,4 +24,5 @@ panic = "abort"
 overflow-checks = true
 
 [patch."https://github.com/calimero-network/core"]
+calimero-sdk = { path = "../../../../calimero-is-near/cali2.0-experimental/crates/sdk" }
 calimero-storage = { path = "../../../../calimero-is-near/cali2.0-experimental/crates/storage" }

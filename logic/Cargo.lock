@@ -50,20 +50,7 @@ version = "0.1.0"
 dependencies = [
  "borsh",
  "bs58",
- "calimero-sdk-macros 0.1.0",
- "cfg-if",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "calimero-sdk"
-version = "0.1.0"
-source = "git+https://github.com/calimero-network/core?branch=master#0e6f611bc1f1e2933fd40f19b1092c9ec53bb720"
-dependencies = [
- "borsh",
- "bs58",
- "calimero-sdk-macros 0.1.0 (git+https://github.com/calimero-network/core?branch=master)",
+ "calimero-sdk-macros",
  "cfg-if",
  "serde",
  "serde_json",
@@ -72,18 +59,6 @@ dependencies = [
 [[package]]
 name = "calimero-sdk-macros"
 version = "0.1.0"
-dependencies = [
- "prettyplease",
- "proc-macro2",
- "quote",
- "syn",
- "thiserror 1.0.61",
-]
-
-[[package]]
-name = "calimero-sdk-macros"
-version = "0.1.0"
-source = "git+https://github.com/calimero-network/core?branch=master#0e6f611bc1f1e2933fd40f19b1092c9ec53bb720"
 dependencies = [
  "prettyplease",
  "proc-macro2",
@@ -97,7 +72,7 @@ name = "calimero-storage"
 version = "0.1.0"
 dependencies = [
  "borsh",
- "calimero-sdk 0.1.0",
+ "calimero-sdk",
  "calimero-storage-macros",
  "eyre",
  "fixedstr",
@@ -256,7 +231,7 @@ name = "minions"
 version = "0.1.0"
 dependencies = [
  "bs58",
- "calimero-sdk 0.1.0 (git+https://github.com/calimero-network/core?branch=master)",
+ "calimero-sdk",
  "calimero-storage",
  "thiserror 2.0.12",
 ]

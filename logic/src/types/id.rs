@@ -9,7 +9,7 @@ use calimero_sdk::serde::{self, de, Deserialize, Serialize};
 
 enum Dud<const N: usize> {}
 
-#[derive(Eq, Debug, PartialEq, BorshDeserialize, BorshSerialize)]
+#[derive(Eq, Copy, Clone, Debug, PartialEq, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]
 pub struct Id<const N: usize, const M: usize> {
     bytes: [u8; N],
@@ -50,6 +50,12 @@ impl<const N: usize, const M: usize> FromStr for Id<N, M> {
         let _len = bs58::decode(s).onto(&mut buf[..])?;
 
         Ok(Self::new(buf))
+    }
+}
+
+impl<const N: usize, const M: usize> AsRef<[u8]> for Id<N, M> {
+    fn as_ref(&self) -> &[u8] {
+        &self.bytes
     }
 }
 
