@@ -9,6 +9,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 bs58 = "0.5.1"
+thiserror = "2.0.12"
+
 calimero-sdk = { git = "https://github.com/calimero-network/core", branch = "master" }
 calimero-storage = { git = "https://github.com/calimero-network/core", branch = "master" }
 
@@ -20,3 +22,6 @@ lto = true
 debug = false
 panic = "abort"
 overflow-checks = true
+
+[patch."https://github.com/calimero-network/core"]
+calimero-storage = { path = "../../../../calimero-is-near/cali2.0-experimental/crates/storage" }

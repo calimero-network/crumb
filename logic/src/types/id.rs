@@ -1,3 +1,4 @@
+use core::fmt;
 use core::marker::PhantomData;
 use core::ops::Deref;
 use core::str::{self, FromStr};
@@ -8,7 +9,7 @@ use calimero_sdk::serde::{self, de, Deserialize, Serialize};
 
 enum Dud<const N: usize> {}
 
-#[derive(Debug, BorshDeserialize, BorshSerialize)]
+#[derive(Eq, Debug, PartialEq, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]
 pub struct Id<const N: usize, const M: usize> {
     bytes: [u8; N],
@@ -63,6 +64,12 @@ impl<const N: usize, const M: usize> Deref for Id<N, M> {
 
     fn deref(&self) -> &Self::Target {
         &self.bytes
+    }
+}
+
+impl<const N: usize, const M: usize> From<[u8; N]> for Id<N, M> {
+    fn from(id: [u8; N]) -> Self {
+        Self::new(id)
     }
 }
 
