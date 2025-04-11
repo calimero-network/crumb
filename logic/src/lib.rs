@@ -1,24 +1,49 @@
 use calimero_sdk::borsh::{BorshDeserialize, BorshSerialize};
+use calimero_sdk::serde::{Deserialize, Serialize};
 use calimero_sdk::{app, env};
 use calimero_storage::collections::{UnorderedMap, Vector};
 
-#[app::event]
-pub enum Event {
-    Increased(u32),
-    Reset,
-}
+mod id;
 
-type BidId = [u8; 8];
-type UserId = [u8; 32];
-type LabelId = [u8; 8];
-type BountyId = [u8; 8];
-type MessageId = [u8; 8];
-type AssignmentId = [u8; 8];
+use id::Id;
+
+#[derive(Debug, BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
+#[borsh(crate = "calimero_sdk::borsh")]
+#[serde(crate = "calimero_sdk::serde")]
+struct BidId(Id<8, 12>);
+
+#[derive(Debug, BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
+#[borsh(crate = "calimero_sdk::borsh")]
+#[serde(crate = "calimero_sdk::serde")]
+struct UserId(Id<32, 44>);
+
+#[derive(Debug, BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
+#[borsh(crate = "calimero_sdk::borsh")]
+#[serde(crate = "calimero_sdk::serde")]
+struct LabelId(Id<8, 12>);
+
+#[derive(Debug, BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
+#[borsh(crate = "calimero_sdk::borsh")]
+#[serde(crate = "calimero_sdk::serde")]
+struct BountyId(Id<8, 12>);
+
+#[derive(Debug, BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
+#[borsh(crate = "calimero_sdk::borsh")]
+#[serde(crate = "calimero_sdk::serde")]
+struct MessageId(Id<8, 12>);
+
+#[derive(Debug, BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
+#[borsh(crate = "calimero_sdk::borsh")]
+#[serde(crate = "calimero_sdk::serde")]
+struct AssignmentId(Id<8, 12>);
+
+#[app::event]
+pub enum Event {}
 
 #[app::state(emits = Event)]
 #[derive(Default, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]
-pub struct AppState {
+struct AppState {
     users: UnorderedMap<UserId, User>,
     bids: UnorderedMap<BidId, Bid>,
     assignments: UnorderedMap<AssignmentId, Assignment>,
@@ -29,7 +54,7 @@ pub struct AppState {
 
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]
-pub struct User {
+struct User {
     name: Option<String>,
     skills: Vector<String>,
     links: Vector<String>,
@@ -43,14 +68,14 @@ pub struct User {
 
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]
-pub struct UserRemarks {
+struct UserRemarks {
     review: f32, // 0.0 - 5.0
     message: MessageId,
 }
 
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]
-pub struct Bounty {
+struct Bounty {
     is_epic: bool,
     author: String,
     description: String,
@@ -77,7 +102,7 @@ pub struct Bounty {
 
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]
-pub enum BountyStatus {
+enum BountyStatus {
     Proposed,
     Triaged,
     Approved,
@@ -86,7 +111,7 @@ pub enum BountyStatus {
 
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]
-pub enum ClosureReason {
+enum ClosureReason {
     Completed { assignment: AssignmentId },
     Abandoned,
     Expired,
@@ -94,7 +119,7 @@ pub enum ClosureReason {
 
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]
-pub struct Bid {
+struct Bid {
     assignment: Option<AssignmentId>,
     brief: String,
     bounty: BountyId,
@@ -111,14 +136,14 @@ pub struct Bid {
 
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]
-pub struct Reward {
+struct Reward {
     amount: u128,
     account: String,
 }
 
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]
-pub enum BidStatus {
+enum BidStatus {
     Proposed,
     Approved,
     Retracted { reason: Option<String> },
@@ -126,7 +151,7 @@ pub enum BidStatus {
 
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]
-pub struct Assignment {
+struct Assignment {
     bid: Option<BidId>,
     bounty: BountyId,
     links: Vector<String>,
@@ -142,7 +167,7 @@ pub struct Assignment {
 
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]
-pub enum AssignmentStatus {
+enum AssignmentStatus {
     Received,
     InProgress,
     Completed,
@@ -151,7 +176,7 @@ pub enum AssignmentStatus {
 
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]
-pub struct Message {
+struct Message {
     author: UserId,
     timestamp: u64,
     target: MessageTarget,
@@ -161,7 +186,7 @@ pub struct Message {
 
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]
-pub enum MessageTarget {
+enum MessageTarget {
     Bounty(BountyId),
     Bid(BidId),
     Assignment(BidId),
@@ -170,7 +195,7 @@ pub enum MessageTarget {
 
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]
-pub struct Reaction {
+struct Reaction {
     emoji: String,
     timestamp: u64,
 }

@@ -255,6 +255,7 @@ checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 name = "minions"
 version = "0.1.0"
 dependencies = [
+ "bs58",
  "calimero-sdk 0.1.0 (git+https://github.com/calimero-network/core?branch=master)",
  "calimero-storage",
 ]
