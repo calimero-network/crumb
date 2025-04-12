@@ -3,6 +3,7 @@ use core::marker::PhantomData;
 use core::ops::Deref;
 use core::str::{self, FromStr};
 use std::borrow::Cow;
+use std::mem;
 
 use calimero_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use calimero_sdk::env;
@@ -111,22 +112,56 @@ impl<'de, const N: usize, const S: usize> Deserialize<'de> for Id<N, S> {
     }
 }
 
-pub trait IdExt<const N: usize> {
-    fn random() -> Self;
+pub trait IdExt<const N: usize, const M: usize>: Sized {
+    fn random() -> Self
+    where
+        Self: From<[u8; N]>;
+
+    fn transmute_ref<T>(&self) -> &T
+    where
+        T: IdTransmute,
+        Self: IdTransmute;
+
+    fn transmute_slice<T>(items: &[Self]) -> &[T]
+    where
+        T: IdTransmute,
+        Self: IdTransmute;
 }
 
-impl<const N: usize, T> IdExt<N> for T
+impl<const N: usize, const M: usize, T> IdExt<N, M> for T
 where
-    T: From<[u8; N]>,
+    T: Deref<Target = Id<N, M>>,
 {
-    fn random() -> Self {
+    fn random() -> Self
+    where
+        T: From<[u8; N]>,
+    {
         let mut bytes = [0; N];
 
         env::random_bytes(&mut bytes);
 
         Self::from(bytes)
     }
+
+    fn transmute_ref<O>(&self) -> &O
+    where
+        O: IdTransmute,
+        Self: IdTransmute,
+    {
+        unsafe { mem::transmute(self) }
+    }
+
+    fn transmute_slice<O>(items: &[Self]) -> &[O]
+    where
+        O: IdTransmute,
+        Self: IdTransmute,
+    {
+        unsafe { mem::transmute(items) }
+    }
 }
+
+#[doc(hidden)]
+pub unsafe trait IdTransmute {}
 
 macro_rules! define {
     ($name:ident < $len:literal $(, $str:literal )? >) => {
@@ -179,6 +214,10 @@ macro_rules! define {
                 Self($crate::types::id::Id::from(id))
             }
         }
+
+        // SAFETY: the macro guarantees the newtype is the same
+        //         size as Id<N, _>
+        unsafe impl $crate::types::id::IdTransmute for $name {}
     };
 }
 
