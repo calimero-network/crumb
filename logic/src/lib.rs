@@ -1,5 +1,5 @@
+use calimero_sdk::app;
 use calimero_sdk::borsh::{BorshDeserialize, BorshSerialize};
-use calimero_sdk::{app, env};
 use calimero_storage::collections::UnorderedMap;
 
 mod assignment;

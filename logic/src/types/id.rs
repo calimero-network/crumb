@@ -5,6 +5,7 @@ use core::str::{self, FromStr};
 use std::borrow::Cow;
 
 use calimero_sdk::borsh::{BorshDeserialize, BorshSerialize};
+use calimero_sdk::env;
 use calimero_sdk::serde::{self, de, Deserialize, Serialize};
 
 enum Dud<const N: usize> {}
@@ -108,5 +109,22 @@ impl<'de, const N: usize, const M: usize> Deserialize<'de> for Id<N, M> {
         let encoded = Container::deserialize(deserializer)?;
 
         Self::from_str(&*encoded.0).map_err(de::Error::custom)
+    }
+}
+
+pub trait IdExt<const N: usize> {
+    fn random() -> Self;
+}
+
+impl<const N: usize, T> IdExt<N> for T
+where
+    T: From<[u8; N]>,
+{
+    fn random() -> Self {
+        let mut bytes = [0; N];
+
+        env::random_bytes(&mut bytes);
+
+        Self::from(bytes)
     }
 }
