@@ -10,22 +10,21 @@ use calimero_sdk::serde::{self, de, Deserialize, Serialize};
 
 enum Dud<const N: usize> {}
 
-#[derive(Eq, Copy, Clone, Debug, PartialEq, BorshDeserialize, BorshSerialize)]
+#[derive(Eq, Ord, Copy, Clone, Debug, PartialEq, PartialOrd, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]
-pub struct Id<const N: usize, const M: usize> {
+pub struct Id<const N: usize, const S: usize = 0> {
     bytes: [u8; N],
-    _priv: PhantomData<Dud<M>>,
+    _priv: PhantomData<Dud<S>>,
 }
 
-impl<const N: usize, const M: usize> Id<N, M> {
-    const EXPECTED_STR_LEN: usize = (N + 1) * 4 / 3;
+impl<const N: usize, const S: usize> Id<N, S> {
+    const SIZE_ASSOC_GUARD: () = {
+        let expected_size = (N + 1) * 4 / 3;
+        let _guard = S - expected_size;
+    };
 
-    pub fn new(id: [u8; N]) -> Self {
-        debug_assert!(
-            M == Self::EXPECTED_STR_LEN,
-            "Id<{N}, {M}> is invalid expected Id<{N}, {}>",
-            Self::EXPECTED_STR_LEN
-        );
+    pub const fn new(id: [u8; N]) -> Self {
+        let _guard = Self::SIZE_ASSOC_GUARD;
 
         Self {
             bytes: id,
@@ -33,7 +32,7 @@ impl<const N: usize, const M: usize> Id<N, M> {
         }
     }
 
-    pub fn as_str<'a>(&self, buf: &'a mut [u8; M]) -> &'a str {
+    pub fn as_str<'a>(&self, buf: &'a mut [u8; S]) -> &'a str {
         let len = bs58::encode(&self.bytes)
             .onto(&mut buf[..])
             .expect("buffer too small");
@@ -42,7 +41,7 @@ impl<const N: usize, const M: usize> Id<N, M> {
     }
 }
 
-impl<const N: usize, const M: usize> FromStr for Id<N, M> {
+impl<const N: usize, const S: usize> FromStr for Id<N, S> {
     type Err = bs58::decode::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -54,19 +53,19 @@ impl<const N: usize, const M: usize> FromStr for Id<N, M> {
     }
 }
 
-impl<const N: usize, const M: usize> AsRef<[u8]> for Id<N, M> {
+impl<const N: usize, const S: usize> AsRef<[u8]> for Id<N, S> {
     fn as_ref(&self) -> &[u8] {
         &self.bytes
     }
 }
 
-impl<const N: usize, const M: usize> AsRef<[u8; N]> for Id<N, M> {
+impl<const N: usize, const S: usize> AsRef<[u8; N]> for Id<N, S> {
     fn as_ref(&self) -> &[u8; N] {
         &self.bytes
     }
 }
 
-impl<const N: usize, const M: usize> Deref for Id<N, M> {
+impl<const N: usize, const S: usize> Deref for Id<N, S> {
     type Target = [u8; N];
 
     fn deref(&self) -> &Self::Target {
@@ -74,30 +73,30 @@ impl<const N: usize, const M: usize> Deref for Id<N, M> {
     }
 }
 
-impl<const N: usize, const M: usize> From<[u8; N]> for Id<N, M> {
+impl<const N: usize, const S: usize> From<[u8; N]> for Id<N, S> {
     fn from(id: [u8; N]) -> Self {
         Self::new(id)
     }
 }
 
-impl<const N: usize, const M: usize> fmt::Display for Id<N, M> {
+impl<const N: usize, const S: usize> fmt::Display for Id<N, S> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.pad(self.as_str(&mut [0; M]))
+        f.pad(self.as_str(&mut [0; S]))
     }
 }
 
-impl<const N: usize, const M: usize> Serialize for Id<N, M> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+impl<const N: usize, const S: usize> Serialize for Id<N, S> {
+    fn serialize<O>(&self, serializer: O) -> Result<O::Ok, O::Error>
     where
-        S: serde::Serializer,
+        O: serde::Serializer,
     {
-        let mut buf = [0; M];
+        let mut buf = [0; S];
 
         serializer.serialize_str(self.as_str(&mut buf))
     }
 }
 
-impl<'de, const N: usize, const M: usize> Deserialize<'de> for Id<N, M> {
+impl<'de, const N: usize, const S: usize> Deserialize<'de> for Id<N, S> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
