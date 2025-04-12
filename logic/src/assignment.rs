@@ -2,7 +2,7 @@ use std::ops::Deref;
 
 use calimero_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use calimero_sdk::serde::{Deserialize, Serialize};
-use calimero_storage::collections::Vector;
+use calimero_storage::collections::UnorderedSet;
 
 use crate::bid::BidId;
 use crate::bounty::BountyId;
@@ -41,10 +41,10 @@ impl From<[u8; 8]> for AssignmentId {
 pub struct Assignment {
     pub bid: Option<BidId>,
     pub bounty: BountyId,
-    pub links: Vector<String>,
+    pub links: UnorderedSet<String>,
     pub status: AssignmentStatus,
     pub expiry: Option<u64>,
-    pub comments: Vector<MessageId>,
+    pub comments: UnorderedSet<MessageId>,
 
     pub received_at: Option<u64>,
     pub in_progress_at: Option<u64>,

@@ -1,6 +1,8 @@
+use std::ops::Deref;
+
 use calimero_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use calimero_sdk::serde::{Deserialize, Serialize};
-use calimero_storage::collections::{UnorderedMap, Vector};
+use calimero_storage::collections::{UnorderedMap, UnorderedSet};
 
 use crate::assignment::AssignmentId;
 use crate::bid::BidId;
@@ -42,16 +44,16 @@ pub struct Bounty {
     pub is_epic: bool,
     pub author: String,
     pub description: String,
-    pub reviewers: Vector<UserId>,
-    pub labels: Vector<LabelId>,
+    pub reviewers: UnorderedSet<UserId>,
+    pub labels: UnorderedSet<LabelId>,
     pub award: Option<u128>,
     pub bids: UnorderedMap<UserId, BidId>,
     pub assignment: UnorderedMap<UserId, AssignmentId>,
     pub status: BountyStatus,
     pub deadline: Option<u64>,
     pub parent: Option<BountyId>,
-    pub children: Vector<BountyId>,
-    pub comments: Vector<MessageId>,
+    pub children: UnorderedSet<BountyId>,
+    pub comments: UnorderedSet<MessageId>,
 
     pub triaged_by: Option<UserId>,
     pub approved_by: Option<UserId>,

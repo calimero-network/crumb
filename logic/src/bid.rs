@@ -2,7 +2,7 @@ use std::ops::Deref;
 
 use calimero_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use calimero_sdk::serde::{Deserialize, Serialize};
-use calimero_storage::collections::Vector;
+use calimero_storage::collections::UnorderedSet;
 
 use crate::assignment::AssignmentId;
 use crate::bounty::BountyId;
@@ -46,7 +46,7 @@ pub struct Bid {
     pub expiry: Option<u64>,
     pub reward: Option<Reward>,
     pub duration: Option<u64>,
-    pub comments: Vector<MessageId>,
+    pub comments: UnorderedSet<MessageId>,
 
     pub proposed_at: Option<u64>,
     pub approved_at: Option<u64>,
