@@ -9,6 +9,8 @@ mod error;
 mod event;
 mod label;
 mod message;
+mod paging;
+mod private;
 mod types;
 mod user;
 mod utils;
