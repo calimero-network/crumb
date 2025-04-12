@@ -1,6 +1,6 @@
 [package]
-name = "minions"
-description = "Bounties backend"
+name = "crumb"
+description = "Calimero bounties"
 version = "0.1.0"
 edition = "2021"
 
