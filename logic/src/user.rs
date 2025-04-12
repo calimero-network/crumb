@@ -10,7 +10,7 @@ use crate::message::MessageId;
 use crate::types::id;
 use crate::AppState;
 
-id::define!(pub UserId<32>);
+id::define!(pub UserId<32, 44>);
 
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]
@@ -46,7 +46,7 @@ macro_rules! ensure_registered {
 #[app::logic]
 impl AppState {
     pub fn ensure_registered(&self) -> app::Result<()> {
-        let user = UserId::from(env::executor_id());
+        let user = UserId::new(env::executor_id());
 
         if !self.users.contains(&user)? {
             app::bail!(Error::NotRegistered);
@@ -61,7 +61,7 @@ impl AppState {
         skills: Vec<String>,
         links: Vec<String>,
     ) -> app::Result<UserId> {
-        let user_id = UserId::from(env::executor_id());
+        let user_id = UserId::new(env::executor_id());
 
         if self.users.contains(&user_id)? {
             app::bail!(Error::AlreadyRegistered);

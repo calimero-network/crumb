@@ -7,7 +7,7 @@ use std::mem;
 
 use calimero_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use calimero_sdk::env;
-use calimero_sdk::serde::{self, Deserialize, Serialize, de};
+use calimero_sdk::serde::{self, de, Deserialize, Serialize};
 
 enum Dud<const N: usize> {}
 
@@ -119,13 +119,13 @@ pub trait IdExt<const N: usize, const M: usize>: Sized {
 
     fn transmute_ref<T>(&self) -> &T
     where
-        T: IdTransmute,
-        Self: IdTransmute;
+        T: IdTransmute<N>,
+        Self: IdTransmute<N>;
 
     fn transmute_slice<T>(items: &[Self]) -> &[T]
     where
-        T: IdTransmute,
-        Self: IdTransmute;
+        T: IdTransmute<N>,
+        Self: IdTransmute<N>;
 }
 
 impl<const N: usize, const M: usize, T> IdExt<N, M> for T
@@ -145,23 +145,23 @@ where
 
     fn transmute_ref<O>(&self) -> &O
     where
-        O: IdTransmute,
-        Self: IdTransmute,
+        O: IdTransmute<N>,
+        Self: IdTransmute<N>,
     {
         unsafe { mem::transmute(self) }
     }
 
     fn transmute_slice<O>(items: &[Self]) -> &[O]
     where
-        O: IdTransmute,
-        Self: IdTransmute,
+        O: IdTransmute<N>,
+        Self: IdTransmute<N>,
     {
         unsafe { mem::transmute(items) }
     }
 }
 
 #[doc(hidden)]
-pub unsafe trait IdTransmute {}
+pub unsafe trait IdTransmute<const N: usize> {}
 
 macro_rules! define {
     ($name:ident < $len:literal $(, $str:literal )? >) => {
@@ -217,7 +217,7 @@ macro_rules! define {
 
         // SAFETY: the macro guarantees the newtype is the same
         //         size as Id<N, _>
-        unsafe impl $crate::types::id::IdTransmute for $name {}
+        unsafe impl $crate::types::id::IdTransmute<$len> for $name {}
     };
 }
 
