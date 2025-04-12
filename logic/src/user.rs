@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use calimero_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use calimero_sdk::serde::{Deserialize, Serialize};
 use calimero_sdk::{app, env};
@@ -9,35 +7,10 @@ use crate::bid::BidId;
 use crate::bounty::BountyId;
 use crate::error::Error;
 use crate::message::MessageId;
-use crate::types::id::Id;
+use crate::types::id;
 use crate::AppState;
 
-#[derive(
-    Eq, Copy, Clone, Debug, PartialEq, BorshSerialize, BorshDeserialize, Serialize, Deserialize,
-)]
-#[borsh(crate = "calimero_sdk::borsh")]
-#[serde(crate = "calimero_sdk::serde")]
-pub struct UserId(Id<32, 44>);
-
-impl Deref for UserId {
-    type Target = Id<32, 44>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl AsRef<[u8]> for UserId {
-    fn as_ref(&self) -> &[u8] {
-        self.0.as_ref()
-    }
-}
-
-impl From<[u8; 32]> for UserId {
-    fn from(id: [u8; 32]) -> Self {
-        Self(Id::from(id))
-    }
-}
+id::define!(pub UserId<32>);
 
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]

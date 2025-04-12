@@ -6,7 +6,7 @@ use std::borrow::Cow;
 
 use calimero_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use calimero_sdk::env;
-use calimero_sdk::serde::{self, de, Deserialize, Serialize};
+use calimero_sdk::serde::{self, Deserialize, Serialize, de};
 
 enum Dud<const N: usize> {}
 
@@ -127,3 +127,59 @@ where
         Self::from(bytes)
     }
 }
+
+macro_rules! define {
+    ($name:ident < $len:literal $(, $str:literal )? >) => {
+        $crate::types::id::define!(@ () $name < $len $(, $str )? >);
+    };
+    (pub $name:ident < $len:literal $(, $str:literal )?>) => {
+        $crate::types::id::define!(@ (pub) $name < $len $(, $str )? >);
+    };
+    (@ ( $($vis:tt)* ) $name:ident < $len:literal $(, $str:literal )? >) => {
+        #[derive(
+            ::core::cmp::Eq,
+            ::core::cmp::Ord,
+            ::core::marker::Copy,
+            ::core::clone::Clone,
+            ::core::fmt::Debug,
+            ::core::cmp::PartialEq,
+            ::core::cmp::PartialOrd,
+            ::calimero_sdk::serde::Serialize,
+            ::calimero_sdk::serde::Deserialize,
+            ::calimero_sdk::borsh::BorshSerialize,
+            ::calimero_sdk::borsh::BorshDeserialize,
+        )]
+        #[borsh(crate = "::calimero_sdk::borsh")]
+        #[serde(crate = "::calimero_sdk::serde")]
+        #[repr(transparent)]
+        $($vis)* struct $name($crate::types::id::Id< $len $(, $str)? >);
+
+        impl $name {
+            pub const fn new(id: [u8; $len]) -> Self {
+                Self($crate::types::id::Id::new(id))
+            }
+        }
+
+        impl ::core::ops::Deref for $name {
+            type Target = $crate::types::id::Id< $len $(, $str)? >;
+
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+
+        impl ::core::convert::AsRef<[u8]> for $name {
+            fn as_ref(&self) -> &[u8] {
+                self.0.as_ref()
+            }
+        }
+
+        impl ::core::convert::From<[u8; $len]> for $name {
+            fn from(id: [u8; $len]) -> Self {
+                Self($crate::types::id::Id::from(id))
+            }
+        }
+    };
+}
+
+pub(crate) use define;
