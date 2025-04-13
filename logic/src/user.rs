@@ -92,18 +92,18 @@ impl AppState {
 #[serde(crate = "calimero_sdk::serde")]
 pub struct UserDelta {
     #[serde(default)]
-    pub name: Option<(DeltaOperation, String)>,
+    pub name: Option<DeltaOperation<String>>,
     #[serde(default)]
-    pub skills: Vec<(DeltaOperation, String)>,
+    pub skills: Vec<DeltaOperation<String>>,
     #[serde(default)]
-    pub links: Vec<(DeltaOperation, String)>,
+    pub links: Vec<DeltaOperation<String>>,
 }
 
 #[derive(Deserialize)]
 #[serde(crate = "calimero_sdk::serde")]
-pub enum DeltaOperation {
-    Add,
-    Remove,
+pub enum DeltaOperation<T> {
+    Add(T),
+    Remove(Option<T>),
 }
 
 #[app::logic]
@@ -111,23 +111,39 @@ impl AppState {
     pub fn update_user(&mut self, user_id: UserId, delta: UserDelta) -> app::Result<()> {
         let mut user = ensure_registered!(self.users.get(&user_id)?);
 
-        if let Some((op, name)) = delta.name {
+        if let Some(op) = delta.name {
             match op {
-                DeltaOperation::Add => user.name = Some(name),
-                DeltaOperation::Remove => user.name = None,
+                DeltaOperation::Add(name) => user.name = Some(name),
+                DeltaOperation::Remove(_) => user.name = None,
             }
         }
-        for (op, skill) in delta.skills {
-            let _ignored = match op {
-                DeltaOperation::Add => user.skills.insert(skill)?,
-                DeltaOperation::Remove => user.skills.remove(&skill)?,
+        for op in delta.skills {
+            match op {
+                DeltaOperation::Add(skill) => {
+                    let _ignored = user.skills.insert(skill)?;
+                }
+                DeltaOperation::Remove(skill) => {
+                    if let Some(skill) = skill {
+                        let _ignored = user.skills.remove(&skill)?;
+                    } else {
+                        user.skills.clear()?
+                    }
+                }
             };
         }
 
-        for (op, link) in delta.links {
-            let _ignored = match op {
-                DeltaOperation::Add => user.links.insert(link)?,
-                DeltaOperation::Remove => user.links.remove(&link)?,
+        for op in delta.links {
+            match op {
+                DeltaOperation::Add(link) => {
+                    let _ignored = user.links.insert(link)?;
+                }
+                DeltaOperation::Remove(link) => {
+                    if let Some(link) = link {
+                        let _ignored = user.links.remove(&link)?;
+                    } else {
+                        user.links.clear()?
+                    }
+                }
             };
         }
 
