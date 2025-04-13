@@ -19,13 +19,14 @@ pub struct Id<const N: usize, const S: usize = 0> {
 }
 
 impl<const N: usize, const S: usize> Id<N, S> {
-    const SIZE_ASSOC_GUARD: () = {
+    #[doc(hidden)]
+    pub const SIZE_GUARD: () = {
         let expected_size = (N + 1) * 4 / 3;
         let _guard = S - expected_size;
     };
 
     pub const fn new(id: [u8; N]) -> Self {
-        let _guard = Self::SIZE_ASSOC_GUARD;
+        let _guard = Self::SIZE_GUARD;
 
         Self {
             bytes: id,
@@ -191,6 +192,10 @@ macro_rules! define {
 
         impl $name {
             pub const fn new(id: [u8; $len]) -> Self {
+                type DefinedId = $crate::types::id::Id::< $len $(, $str)? >;
+
+                let _guard = DefinedId::SIZE_GUARD;
+
                 Self($crate::types::id::Id::new(id))
             }
         }
@@ -211,7 +216,7 @@ macro_rules! define {
 
         impl ::core::convert::From<[u8; $len]> for $name {
             fn from(id: [u8; $len]) -> Self {
-                Self($crate::types::id::Id::from(id))
+                Self::new(id)
             }
         }
 
