@@ -19,7 +19,7 @@ id::define!(pub BountyId<8, 12>);
 pub struct Bounty {
     pub is_epic: bool,
     pub author: UserId,
-    pub description: String,
+    pub message: MessageId,
     pub reviewers: UnorderedSet<UserId>,
     pub labels: UnorderedSet<LabelId>,
     pub award: Option<u128>,
@@ -29,7 +29,6 @@ pub struct Bounty {
     pub deadline: Option<u64>,
     pub parent: Option<BountyId>,
     pub children: UnorderedSet<BountyId>,
-    pub comments: UnorderedSet<MessageId>,
 
     pub triaged_by: Option<UserId>,
     pub approved_by: Option<UserId>,
@@ -79,13 +78,15 @@ impl AppState {
         let mut user = self.get_registered_user(&user_id)?;
 
         let bounty_id = unique(|| BountyId::random(), |id| self.bounties.contains(id))?;
+        let message_id = unique(|| MessageId::random(), |id| self.messages.contains(id))?;
+        // todo! push message
 
         let now = env::time_now();
 
         let bounty = Bounty {
             is_epic: request.is_epic,
             author,
-            description: request.description,
+            message: message_id,
             reviewers: request.reviewers.into_iter().collect(),
             labels: request.labels.into_iter().collect(),
             award: request.award,
