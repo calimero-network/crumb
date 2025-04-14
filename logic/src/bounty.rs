@@ -70,10 +70,10 @@ pub enum ClosureReason {
 #[serde(crate = "calimero_sdk::serde")]
 #[serde(tag = "kind", content = "data")]
 pub enum Error {
-    #[error("bounty title too long ({actual} > {expected})")]
-    BountyTitleTooLong { actual: usize, expected: usize },
-    #[error("bounty description too long ({actual} > {expected})")]
-    BountyDescriptionTooLong { actual: usize, expected: usize },
+    #[error("bounty title too long ({got} > {max})")]
+    BountyTitleTooLong { got: usize, max: usize },
+    #[error("bounty description too long ({got} > {max})")]
+    BountyDescriptionTooLong { got: usize, max: usize },
     #[error("bounty reviewers limit exceeded (max {max})")]
     BountyReviewersLimitExceeded { max: usize },
     #[error("bounty labels limit exceeded (max {max})")]
@@ -83,8 +83,8 @@ pub enum Error {
 fn validate_bounty_title(title: &str) -> app::Result<()> {
     if title.len() > MAX_BOUNTY_TITLE_LENGTH {
         app::bail!(Error::BountyTitleTooLong {
-            actual: title.len(),
-            expected: MAX_BOUNTY_TITLE_LENGTH,
+            got: title.len(),
+            max: MAX_BOUNTY_TITLE_LENGTH,
         });
     }
 
@@ -94,8 +94,8 @@ fn validate_bounty_title(title: &str) -> app::Result<()> {
 fn validate_bounty_description(description: &str) -> app::Result<()> {
     if description.len() > MAX_BOUNTY_DESCRIPTION_LENGTH {
         app::bail!(Error::BountyDescriptionTooLong {
-            actual: description.len(),
-            expected: MAX_BOUNTY_DESCRIPTION_LENGTH,
+            got: description.len(),
+            max: MAX_BOUNTY_DESCRIPTION_LENGTH,
         });
     }
 

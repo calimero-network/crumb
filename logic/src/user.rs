@@ -53,19 +53,19 @@ pub enum Error<'a> {
     UserAlreadyRegistered,
     #[error("username cannot be empty")]
     UserNameCannotBeEmpty,
-    #[error("username is too long ({actual} > {expected})")]
-    UserNameTooLong { expected: usize, actual: usize },
-    #[error("user skill is too long ({actual} > {expected}): {skill}")]
+    #[error("username is too long ({max} > {got})")]
+    UserNameTooLong { max: usize, got: usize },
+    #[error("user skill is too long ({max} > {got}): {skill}")]
     UserSkillTooLong {
         skill: &'a str,
-        expected: usize,
-        actual: usize,
+        max: usize,
+        got: usize,
     },
-    #[error("user link is too long ({actual} > {expected}): {link}")]
+    #[error("user link is too long ({max} > {got}): {link}")]
     UserLinkTooLong {
         link: &'a str,
-        expected: usize,
-        actual: usize,
+        max: usize,
+        got: usize,
     },
 }
 
@@ -100,8 +100,8 @@ fn validate_user_name(name: &str) -> app::Result<()> {
 
     if name.len() > MAX_USER_NAME_LENGTH {
         app::bail!(Error::UserNameTooLong {
-            expected: MAX_USER_NAME_LENGTH,
-            actual: name.len(),
+            max: MAX_USER_NAME_LENGTH,
+            got: name.len(),
         });
     }
 
@@ -112,8 +112,8 @@ fn validate_skill(skill: &str) -> app::Result<()> {
     if skill.len() > MAX_USER_SKILL_LENGTH {
         app::bail!(Error::UserSkillTooLong {
             skill,
-            expected: MAX_USER_SKILL_LENGTH,
-            actual: skill.len(),
+            max: MAX_USER_SKILL_LENGTH,
+            got: skill.len(),
         });
     }
 
@@ -124,8 +124,8 @@ fn validate_link(link: &str) -> app::Result<()> {
     if link.len() > MAX_USER_LINK_LENGTH {
         app::bail!(Error::UserLinkTooLong {
             link,
-            expected: MAX_USER_LINK_LENGTH,
-            actual: link.len(),
+            max: MAX_USER_LINK_LENGTH,
+            got: link.len(),
         });
     }
 
