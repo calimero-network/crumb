@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::convert::Infallible;
 
 use calimero_sdk::app;
@@ -40,4 +41,11 @@ where
         "unable to determine unique value for `{}` after 10 attempts",
         std::any::type_name::<T>()
     );
+}
+
+pub fn truncate_string(s: &str, max_width: usize) -> Cow<'_, str> {
+    if s.len() <= max_width {
+        return s.into();
+    }
+    s.chars().take(max_width - 1).chain(Some('…')).collect()
 }

@@ -259,6 +259,7 @@ impl AppState {
 pub struct UserViewBrief {
     pub id: UserId,
     pub name: Option<String>,
+    pub skills: Vec<String>,
     // pub rank: Option<u32>,
 }
 
@@ -285,9 +286,13 @@ impl AppState {
             return Ok(None);
         };
 
+        let skills = user.skills.iter()?.take(5);
+        let skills = skills.map(|s| truncate_string(&s, 20).into()).collect();
+
         Ok(Some(UserViewBrief {
             id: user_id,
             name: user.name,
+            skills,
         }))
     }
 
