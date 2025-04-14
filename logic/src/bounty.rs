@@ -5,7 +5,7 @@ use calimero_storage::collections::{UnorderedMap, UnorderedSet};
 
 use crate::assignment::AssignmentId;
 use crate::bid::BidId;
-use crate::message::MessageId;
+use crate::message::{MessageId, MessageTarget};
 use crate::paging::ResumptionToken;
 use crate::types::id::{self, IdExt};
 use crate::user::UserId;
@@ -17,16 +17,21 @@ id::define!(pub BountyId<8, 12>);
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]
 pub struct Bounty {
-    pub is_epic: bool,
+    pub title: String,
     pub author: UserId,
     pub message: MessageId,
-    pub reviewers: UnorderedSet<UserId>,
-    pub labels: UnorderedSet<LabelId>,
+
     pub award: Option<u128>,
+    pub status: BountyStatus,
+    pub is_epic: bool,
+    pub deadline: Option<u64>,
+
+    pub labels: UnorderedSet<LabelId>,
+    pub reviewers: UnorderedSet<UserId>,
+
     pub bids: UnorderedMap<UserId, BidId>,
     pub assignments: UnorderedMap<UserId, AssignmentId>,
-    pub status: BountyStatus,
-    pub deadline: Option<u64>,
+
     pub parent: Option<BountyId>,
     pub children: UnorderedSet<BountyId>,
 
@@ -62,6 +67,7 @@ pub enum ClosureReason {
 #[serde(crate = "calimero_sdk::serde")]
 pub struct CreateBountyRequest {
     pub is_epic: bool,
+    pub title: String,
     pub description: String,
     pub reviewers: Vec<UserId>,
     pub labels: Vec<LabelId>,
@@ -78,25 +84,34 @@ impl AppState {
         let mut user = self.get_registered_user(&user_id)?;
 
         let bounty_id = unique(|| BountyId::random(), |id| self.bounties.contains(id))?;
-        let message_id = unique(|| MessageId::random(), |id| self.messages.contains(id))?;
-        // todo! push message
+
+        let message_id = self.internal_post_message(
+            user_id,
+            &mut user,
+            MessageTarget::Bounty(bounty_id),
+            request.description,
+        )?;
 
         let now = env::time_now();
 
         let bounty = Bounty {
-            is_epic: request.is_epic,
-            author,
+            title: request.title,
+            author: user_id,
             message: message_id,
-            reviewers: request.reviewers.into_iter().collect(),
-            labels: request.labels.into_iter().collect(),
+
             award: request.award,
+            status: BountyStatus::Proposed,
+            is_epic: request.is_epic,
+            deadline: request.deadline,
+
+            labels: request.labels.into_iter().collect(),
+            reviewers: request.reviewers.into_iter().collect(),
+
             bids: UnorderedMap::new(),
             assignments: UnorderedMap::new(),
-            status: BountyStatus::Proposed,
-            deadline: request.deadline,
+
             parent: request.parent,
             children: UnorderedSet::new(),
-            comments: UnorderedSet::new(),
 
             triaged_by: None,
             approved_by: None,

@@ -20,10 +20,13 @@ pub struct User {
     pub name: Option<String>,
     pub skills: UnorderedSet<String>,
     pub links: UnorderedSet<String>,
+
     pub total_reward: u128,
+
     pub bids: UnorderedSet<BidId>,
     pub assignments: UnorderedSet<BidId>,
     pub bounties: UnorderedSet<BountyId>,
+
     pub messages: UnorderedSet<MessageId>,
     pub remarks: UnorderedSet<UserRemarks>,
 }
@@ -90,10 +93,13 @@ impl AppState {
             name,
             skills,
             links,
+
             total_reward: 0,
+
             bids: UnorderedSet::new(),
             assignments: UnorderedSet::new(),
             bounties: UnorderedSet::new(),
+
             messages: UnorderedSet::new(),
             remarks: UnorderedSet::new(),
         };
