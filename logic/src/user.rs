@@ -41,15 +41,19 @@ pub struct UserRemarks {
 #[derive(Debug, Error, Serialize)]
 #[serde(crate = "calimero_sdk::serde")]
 #[serde(tag = "kind", content = "data")]
-pub enum Error {
+pub enum Error<'a> {
     #[error("user is not registered")]
     UserNotRegistered,
     #[error("user is already registered")]
     UserAlreadyRegistered,
     #[error("username cannot be empty")]
-    UserNameEmpty,
+    UserNameCannotBeEmpty,
     #[error("username is too long")]
     UserNameTooLong,
+    #[error("user skill is too long: {0}")]
+    UserSkillTooLong(&'a str),
+    #[error("user link is too long: {0}")]
+    UserLinkTooLong(&'a str),
 }
 
 static EXECUTOR_ID: LazyLock<UserId> = std::sync::LazyLock::new(|| UserId::new(env::executor_id()));
@@ -78,11 +82,27 @@ impl AppState {
 
 fn validate_user_name(name: &str) -> app::Result<()> {
     if name.is_empty() {
-        app::bail!(Error::UserNameEmpty);
+        app::bail!(Error::UserNameCannotBeEmpty);
     }
 
     if name.len() > 40 {
         app::bail!(Error::UserNameTooLong);
+    }
+
+    Ok(())
+}
+
+fn validate_skill(skill: &str) -> app::Result<()> {
+    if skill.len() > 20 {
+        app::bail!(Error::UserSkillTooLong(skill));
+    }
+
+    Ok(())
+}
+
+fn validate_link(link: &str) -> app::Result<()> {
+    if link.len() > 200 {
+        app::bail!(Error::UserLinkTooLong(link));
     }
 
     Ok(())
@@ -106,8 +126,15 @@ impl AppState {
             validate_user_name(name)?;
         }
 
-        let skills = skills.into_iter().collect();
-        let links = links.into_iter().collect();
+        let skills = skills
+            .into_iter()
+            .map(|s| validate_skill(&s).map(|_| s))
+            .collect::<app::Result<_>>()?;
+
+        let links = links
+            .into_iter()
+            .map(|s| validate_link(&s).map(|_| s))
+            .collect::<app::Result<_>>()?;
 
         let user = User {
             name,
@@ -166,6 +193,8 @@ impl AppState {
         for op in delta.skills {
             match op {
                 DeltaOperation::Add(skill) => {
+                    validate_skill(&skill)?;
+
                     let _ignored = user.skills.insert(skill)?;
                 }
                 DeltaOperation::Remove(skill) => {
@@ -181,6 +210,8 @@ impl AppState {
         for op in delta.links {
             match op {
                 DeltaOperation::Add(link) => {
+                    validate_link(&link)?;
+
                     let _ignored = user.links.insert(link)?;
                 }
                 DeltaOperation::Remove(link) => {
