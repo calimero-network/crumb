@@ -280,7 +280,7 @@ impl AppState {
             app::bail!(Error::BountyNotFound);
         };
 
-        let message = self.internal_get_message(&bounty.message)?;
+        let message = self.internal_get_message(bounty.message)?;
 
         let status = BountyStatusLite::from(&bounty.status);
 

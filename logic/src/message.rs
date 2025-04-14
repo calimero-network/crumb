@@ -49,6 +49,8 @@ pub struct Reaction {
 #[serde(crate = "calimero_sdk::serde")]
 #[serde(tag = "kind", content = "data")]
 pub enum Error {
+    #[error("message not found: {0}")]
+    MessageNotFound(MessageId),
     #[error("parent message not found: {0}")]
     ParentMessageNotFound(MessageId),
     #[error("message target not found: {0:?}")]
@@ -93,6 +95,14 @@ impl AppState {
         let _ignored = self.messages.insert(message_id, message)?;
 
         Ok(message_id)
+    }
+
+    pub fn internal_get_message(&self, message_id: MessageId) -> app::Result<Message> {
+        let Some(message) = self.messages.get(&message_id)? else {
+            app::bail!(Error::MessageNotFound(message_id));
+        };
+
+        Ok(message)
     }
 }
 
