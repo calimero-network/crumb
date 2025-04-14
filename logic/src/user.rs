@@ -1,3 +1,5 @@
+use std::sync::LazyLock;
+
 use calimero_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use calimero_sdk::serde::{Deserialize, Serialize};
 use calimero_sdk::{app, env};
@@ -33,35 +35,39 @@ pub struct UserRemarks {
     pub message: MessageId,
 }
 
-macro_rules! ensure_registered {
-    ($user:expr) => {{
-        let Some(user): Option<User> = $user else {
-            app::bail!(Error::NotRegistered);
-        };
+static EXECUTOR_ID: LazyLock<UserId> = std::sync::LazyLock::new(|| UserId::new(env::executor_id()));
 
-        user
-    }};
-}
-
-#[app::logic]
 impl AppState {
-    pub fn ensure_registered(&self) -> app::Result<()> {
-        let user = UserId::new(env::executor_id());
+    pub fn current_user(&self) -> UserId {
+        *EXECUTOR_ID
+    }
 
-        if !self.users.contains(&user)? {
+    pub fn ensure_registered_user(&self, user_id: &UserId) -> app::Result<()> {
+        if !self.users.contains(user_id)? {
             app::bail!(Error::NotRegistered);
         }
 
         Ok(())
     }
 
+    pub fn get_registered_user(&self, user_id: &UserId) -> app::Result<User> {
+        let Some(user) = self.users.get(user_id)? else {
+            app::bail!(Error::NotRegistered);
+        };
+
+        Ok(user)
+    }
+}
+
+#[app::logic]
+impl AppState {
     pub fn register(
         &mut self,
         name: Option<String>,
         skills: Vec<String>,
         links: Vec<String>,
     ) -> app::Result<UserId> {
-        let user_id = UserId::new(env::executor_id());
+        let user_id = self.current_user();
 
         if self.users.contains(&user_id)? {
             app::bail!(Error::AlreadyRegistered);
@@ -109,7 +115,7 @@ pub enum DeltaOperation<T> {
 #[app::logic]
 impl AppState {
     pub fn update_user(&mut self, user_id: UserId, delta: UserDelta) -> app::Result<()> {
-        let mut user = ensure_registered!(self.users.get(&user_id)?);
+        let mut user = self.get_registered_user(&user_id)?;
 
         if let Some(op) = delta.name {
             match op {
@@ -147,7 +153,7 @@ impl AppState {
             };
         }
 
-        self.users.insert(user_id, user)?;
+        let _ignored = self.users.insert(user_id, user)?;
 
         Ok(())
     }

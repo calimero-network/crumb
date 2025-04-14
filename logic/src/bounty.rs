@@ -74,9 +74,9 @@ pub struct CreateBountyRequest {
 #[app::logic]
 impl AppState {
     pub fn create_bounty(&mut self, request: CreateBountyRequest) -> app::Result<BountyId> {
-        self.ensure_registered()?;
+        let author = self.current_user();
 
-        let author = UserId::new(env::executor_id());
+        self.ensure_registered_user(&author)?;
 
         let bounty_id = unique(|| BountyId::random(), |id| self.bounties.contains(id))?;
 
@@ -191,7 +191,9 @@ impl AppState {
         offset: Option<usize>,
         length: Option<usize>,
     ) -> app::Result<(Vec<BountyId>, Option<ResumptionToken>)> {
-        self.ensure_registered()?;
+        let user_id = self.current_user();
+
+        self.ensure_registered_user(&user_id)?;
 
         // todo! integrate paginated resumption
         let _resume = resume;
