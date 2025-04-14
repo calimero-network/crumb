@@ -4,10 +4,10 @@ use calimero_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use calimero_sdk::serde::{Deserialize, Serialize};
 use calimero_sdk::{app, env};
 use calimero_storage::collections::UnorderedSet;
+use thiserror::Error;
 
 use crate::bid::BidId;
 use crate::bounty::BountyId;
-use crate::error::Error;
 use crate::message::MessageId;
 use crate::types::id;
 use crate::AppState;
@@ -35,6 +35,16 @@ pub struct UserRemarks {
     pub message: MessageId,
 }
 
+#[derive(Debug, Error, Serialize)]
+#[serde(crate = "calimero_sdk::serde")]
+#[serde(tag = "kind", content = "data")]
+pub enum UserError {
+    #[error("user is not registered")]
+    NotRegistered,
+    #[error("user is already registered")]
+    AlreadyRegistered,
+}
+
 static EXECUTOR_ID: LazyLock<UserId> = std::sync::LazyLock::new(|| UserId::new(env::executor_id()));
 
 impl AppState {
@@ -44,7 +54,7 @@ impl AppState {
 
     pub fn ensure_registered_user(&self, user_id: &UserId) -> app::Result<()> {
         if !self.users.contains(user_id)? {
-            app::bail!(Error::NotRegistered);
+            app::bail!(UserError::NotRegistered);
         }
 
         Ok(())
@@ -52,7 +62,7 @@ impl AppState {
 
     pub fn get_registered_user(&self, user_id: &UserId) -> app::Result<User> {
         let Some(user) = self.users.get(user_id)? else {
-            app::bail!(Error::NotRegistered);
+            app::bail!(UserError::NotRegistered);
         };
 
         Ok(user)
@@ -70,7 +80,7 @@ impl AppState {
         let user_id = self.current_user();
 
         if self.users.contains(&user_id)? {
-            app::bail!(Error::AlreadyRegistered);
+            app::bail!(UserError::AlreadyRegistered);
         }
 
         let skills = skills.into_iter().collect();

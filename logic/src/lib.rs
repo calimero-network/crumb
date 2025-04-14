@@ -5,7 +5,6 @@ use calimero_storage::collections::UnorderedMap;
 mod assignment;
 mod bid;
 mod bounty;
-mod error;
 mod event;
 mod label;
 mod message;
