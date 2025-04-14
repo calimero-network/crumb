@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use calimero_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use calimero_sdk::serde::{Deserialize, Serialize};
 use calimero_sdk::{app, env};
@@ -9,7 +11,7 @@ use crate::bid::BidId;
 use crate::bounty::BountyId;
 use crate::types::id::{self, IdExt};
 use crate::user::{User, UserId};
-use crate::utils::unique;
+use crate::utils::{borsh_char, unique};
 use crate::AppState;
 
 id::define!(pub MessageId<8, 12>);
@@ -23,7 +25,7 @@ pub struct Message {
     pub timestamp: u64,
     pub target: MessageTarget,
     pub content: String,
-    pub reactions: UnorderedMap<UserId, Reaction>,
+    pub reactions: UnorderedSet<Reaction>,
     pub comments: UnorderedSet<MessageId>,
 }
 
@@ -41,8 +43,12 @@ pub enum MessageTarget {
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]
 pub struct Reaction {
-    emoji: String,
-    timestamp: u64,
+    #[borsh(
+        serialize_with = "borsh_char::ser",
+        deserialize_with = "borsh_char::de"
+    )]
+    emoji: char,
+    users: UnorderedMap<UserId, u64>,
 }
 
 #[derive(Debug, Error, Serialize)]
@@ -76,7 +82,7 @@ impl AppState {
             timestamp,
             target,
             content,
-            reactions: UnorderedMap::new(),
+            reactions: UnorderedSet::new(),
             comments: UnorderedSet::new(),
         };
 
@@ -150,5 +156,55 @@ impl AppState {
         let _ignored = self.users.insert(user_id, user)?;
 
         Ok(message_id)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(crate = "calimero_sdk::serde")]
+pub struct MessageView {
+    pub id: MessageId,
+    pub author: UserId,
+    pub timestamp: u64,
+    pub target: MessageTarget,
+    pub content: String,
+    pub reactions: Vec<ReactionView>,
+    pub comments: Vec<MessageId>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(crate = "calimero_sdk::serde")]
+pub struct ReactionView {
+    pub emoji: char,
+    pub users: BTreeMap<UserId, u64>,
+}
+
+#[app::logic]
+impl AppState {
+    pub fn get_message(&self, message_id: MessageId) -> app::Result<MessageView> {
+        let message = self.internal_get_message(message_id)?;
+
+        let reactions = message
+            .reactions
+            .iter()?
+            .map(|reaction| {
+                let emoji = reaction.emoji;
+
+                let users = reaction.users.entries()?.collect();
+
+                Ok(ReactionView { emoji, users })
+            })
+            .collect::<app::Result<_>>()?;
+
+        let comments = message.comments.iter()?.collect();
+
+        Ok(MessageView {
+            id: message_id,
+            author: message.author,
+            timestamp: message.timestamp,
+            target: message.target,
+            content: message.content,
+            reactions,
+            comments,
+        })
     }
 }

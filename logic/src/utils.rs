@@ -49,3 +49,35 @@ pub fn truncate_string(s: &str, max_width: usize) -> Cow<'_, str> {
     }
     s.chars().take(max_width - 1).chain(Some('…')).collect()
 }
+
+pub mod borsh_char {
+    use std::io;
+
+    pub fn ser<W>(value: &char, writer: &mut W) -> io::Result<()>
+    where
+        W: io::Write,
+    {
+        let value = *value as u32;
+        let value = value.to_le_bytes();
+        writer.write_all(&value)?;
+        Ok(())
+    }
+
+    pub fn de<R>(reader: &mut R) -> io::Result<char>
+    where
+        R: io::Read,
+    {
+        let mut buf = [0; 4];
+
+        reader.read_exact(&mut buf)?;
+
+        let value = u32::from_le_bytes(buf);
+
+        char::from_u32(value).ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("invalid char value: {buf:?}"),
+            )
+        })
+    }
+}
