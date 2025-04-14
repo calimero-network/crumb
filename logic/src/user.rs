@@ -11,6 +11,7 @@ use crate::bid::BidId;
 use crate::bounty::BountyId;
 use crate::message::MessageId;
 use crate::types::id;
+use crate::utils::truncate_string;
 use crate::AppState;
 
 id::define!(pub UserId<32, 44>);

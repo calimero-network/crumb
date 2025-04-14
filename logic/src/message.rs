@@ -119,6 +119,7 @@ fn validate_message(message: &str) -> app::Result<()> {
             max: MAX_MESSAGE_LENGTH,
         });
     }
+
     Ok(())
 }
 
