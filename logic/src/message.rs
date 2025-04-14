@@ -1,5 +1,5 @@
 use calimero_sdk::borsh::{BorshDeserialize, BorshSerialize};
-use calimero_storage::collections::UnorderedMap;
+use calimero_storage::collections::{UnorderedMap, UnorderedSet};
 
 use crate::bid::BidId;
 use crate::bounty::BountyId;
@@ -16,6 +16,7 @@ pub struct Message {
     pub target: MessageTarget,
     pub content: String,
     pub reactions: UnorderedMap<UserId, Reaction>,
+    pub comments: UnorderedSet<MessageId>,
 }
 
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
@@ -25,6 +26,7 @@ pub enum MessageTarget {
     Bid(BidId),
     Assignment(BidId),
     User(UserId),
+    Message(MessageId),
 }
 
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
