@@ -17,6 +17,11 @@ use crate::{AppState, LabelId};
 
 id::define!(pub BountyId<8, 12>);
 
+const MAX_BOUNTY_TITLE_LENGTH: usize = 80;
+const MAX_BOUNTY_DESCRIPTION_LENGTH: usize = 10_000;
+const MAX_NUMBER_OF_REQUIRED_REVIEWS: usize = 20;
+const MAX_NUMBER_OF_LABELS: usize = 20;
+
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]
 pub struct Bounty {

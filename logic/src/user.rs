@@ -15,9 +15,9 @@ use crate::AppState;
 
 id::define!(pub UserId<32, 44>);
 
-const MAX_USER_NAME_LENGTH: usize = 40;
+const MAX_USER_NAME_LENGTH: usize = 100;
 const MAX_USER_SKILL_LENGTH: usize = 20;
-const MAX_USER_LINK_LENGTH: usize = 200;
+const MAX_USER_LINK_LENGTH: usize = 300;
 
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]
