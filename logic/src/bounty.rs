@@ -3,7 +3,7 @@ use std::collections::BTreeSet;
 use calimero_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use calimero_sdk::serde::{Deserialize, Serialize};
 use calimero_sdk::{app, env};
-use calimero_storage::collections::{UnorderedMap, UnorderedSet};
+use calimero_storage::collections::UnorderedSet;
 use thiserror::Error;
 
 use crate::assignment::AssignmentId;
@@ -12,7 +12,7 @@ use crate::message::{MessageId, MessageTarget};
 use crate::paging::ResumptionToken;
 use crate::types::id::{self, IdExt};
 use crate::user::UserId;
-use crate::utils::unique;
+use crate::utils::{truncate_string, unique};
 use crate::{AppState, LabelId};
 
 id::define!(pub BountyId<8, 12>);
@@ -37,8 +37,8 @@ pub struct Bounty {
     pub labels: UnorderedSet<LabelId>,
     pub reviewers: UnorderedSet<UserId>,
 
-    pub bids: UnorderedMap<UserId, BidId>,
-    pub assignments: UnorderedMap<UserId, AssignmentId>,
+    pub bids: UnorderedSet<BidId>,
+    pub assignments: UnorderedSet<AssignmentId>,
 
     pub parent: Option<BountyId>,
     pub children: UnorderedSet<BountyId>,
@@ -75,6 +75,8 @@ pub enum ClosureReason {
 #[serde(crate = "calimero_sdk::serde")]
 #[serde(tag = "kind", content = "data")]
 pub enum Error {
+    #[error("bounty not found")]
+    BountyNotFound,
     #[error("bounty title too long ({got} > {max})")]
     BountyTitleTooLong { got: usize, max: usize },
     #[error("bounty description too long ({got} > {max})")]
@@ -176,8 +178,8 @@ impl AppState {
             labels: request.labels.into_iter().collect(),
             reviewers: request.reviewers.into_iter().collect(),
 
-            bids: UnorderedMap::new(),
-            assignments: UnorderedMap::new(),
+            bids: UnorderedSet::new(),
+            assignments: UnorderedSet::new(),
 
             parent: request.parent,
             children: UnorderedSet::new(),
@@ -199,6 +201,96 @@ impl AppState {
         let _ignored = self.bounties.insert(bounty_id, bounty)?;
 
         Ok(bounty_id)
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "calimero_sdk::serde")]
+pub enum BountyStatusLite {
+    Proposed,
+    Triaged,
+    Approved,
+    Expired,
+    Abandoned,
+    Completed,
+}
+
+impl From<&BountyStatus> for BountyStatusLite {
+    fn from(status: &BountyStatus) -> Self {
+        match status {
+            BountyStatus::Proposed => BountyStatusLite::Proposed,
+            BountyStatus::Triaged => BountyStatusLite::Triaged,
+            BountyStatus::Approved => BountyStatusLite::Approved,
+            BountyStatus::Closed { reason } => match reason {
+                ClosureReason::Expired => BountyStatusLite::Expired,
+                ClosureReason::Abandoned => BountyStatusLite::Abandoned,
+                ClosureReason::Completed { .. } => BountyStatusLite::Completed,
+            },
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "calimero_sdk::serde")]
+pub struct BountyViewBrief {
+    id: BountyId,
+    title: String,
+    author: UserId,
+    description: String,
+    status: BountyStatusLite,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "calimero_sdk::serde")]
+pub struct BountyView {
+    id: BountyId,
+    title: String,
+    author: UserId,
+    message: MessageId,
+    // description: String, // <- fetch via message API instead
+    award: Option<u128>,
+    status: BountyStatusLite,
+    is_epic: bool,
+    deadline: Option<u64>,
+}
+
+#[app::logic]
+impl AppState {
+    pub fn get_bounty_brief(&self, bounty_id: BountyId) -> app::Result<BountyViewBrief> {
+        let Some(bounty) = self.bounties.get(&bounty_id)? else {
+            app::bail!(Error::BountyNotFound);
+        };
+
+        let message = self.internal_get_message(&bounty.message)?;
+
+        let status = BountyStatusLite::from(&bounty.status);
+
+        Ok(BountyViewBrief {
+            id: bounty_id,
+            title: bounty.title,
+            author: bounty.author,
+            description: truncate_string(&message.content, 100).into(),
+            status,
+        })
+    }
+
+    pub fn get_bounty(&self, bounty_id: BountyId) -> app::Result<BountyView> {
+        let Some(bounty) = self.bounties.get(&bounty_id)? else {
+            app::bail!(Error::BountyNotFound);
+        };
+
+        let status = BountyStatusLite::from(&bounty.status);
+
+        Ok(BountyView {
+            id: bounty_id,
+            title: bounty.title,
+            author: bounty.author,
+            message: bounty.message,
+            award: bounty.award,
+            status,
+            is_epic: bounty.is_epic,
+            deadline: bounty.deadline,
+        })
     }
 }
 
@@ -279,10 +371,6 @@ impl AppState {
         offset: Option<usize>,
         length: Option<usize>,
     ) -> app::Result<(Vec<BountyId>, Option<ResumptionToken>)> {
-        let user_id = self.current_user();
-
-        self.ensure_registered_user(&user_id)?;
-
         // todo! integrate paginated resumption
         let _resume = resume;
 
