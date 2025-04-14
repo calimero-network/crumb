@@ -14,6 +14,8 @@ use crate::AppState;
 
 id::define!(pub MessageId<8, 12>);
 
+const MAX_MESSAGE_LENGTH: usize = 1000;
+
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]
 pub struct Message {
@@ -51,6 +53,8 @@ pub enum Error {
     ParentMessageNotFound(MessageId),
     #[error("message target not found: {0:?}")]
     MessageTargetNotFound(MessageTarget),
+    #[error("message too long ({got} > {max})")]
+    MessageTooLong { got: usize, max: usize },
 }
 
 impl AppState {
@@ -92,6 +96,16 @@ impl AppState {
     }
 }
 
+fn validate_message(message: &str) -> app::Result<()> {
+    if message.len() > MAX_MESSAGE_LENGTH {
+        app::bail!(Error::MessageTooLong {
+            got: message.len(),
+            max: MAX_MESSAGE_LENGTH,
+        });
+    }
+    Ok(())
+}
+
 #[app::logic]
 impl AppState {
     pub fn post_message(
@@ -103,6 +117,8 @@ impl AppState {
 
         let mut user = self.get_registered_user(&user_id)?;
 
+        validate_message(&content)?;
+
         let parent = match target {
             MessageTarget::Bounty(id) => self.bounties.get(&id)?.map(|b| b.message),
             MessageTarget::Bid(id) => self.bids.get(&id)?.map(|b| b.message),
@@ -111,7 +127,7 @@ impl AppState {
         };
 
         let Some(parent) = parent else {
-            app::bail!(MessageError::TargetNotFound(target));
+            app::bail!(Error::MessageTargetNotFound(target));
         };
 
         let message_id = self.internal_post_message(
