@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::sync::LazyLock;
 
 use calimero_sdk::borsh::{BorshDeserialize, BorshSerialize};
@@ -136,8 +137,8 @@ impl AppState {
     pub fn register(
         &mut self,
         name: Option<String>,
-        skills: Vec<String>,
-        links: Vec<String>,
+        skills: BTreeSet<String>,
+        links: BTreeSet<String>,
     ) -> app::Result<UserId> {
         let user_id = self.current_user();
 
