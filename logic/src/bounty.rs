@@ -246,12 +246,31 @@ pub struct BountyView {
     id: BountyId,
     title: String,
     author: UserId,
-    message: MessageId,
-    // description: String, // <- fetch via message API instead
+    message: MessageId, // <- fetch description via message API instead
+
     award: Option<u128>,
     status: BountyStatusLite,
     is_epic: bool,
     deadline: Option<u64>,
+
+    labels: Vec<LabelId>,
+    reviewers: Vec<UserId>,
+
+    bids: Vec<BidId>,
+    assignments: Vec<AssignmentId>,
+
+    parent: Option<BountyId>,
+    children: Vec<BountyId>,
+
+    triaged_by: Option<UserId>,
+    approved_by: Option<UserId>,
+    closed_by: Option<UserId>,
+
+    proposed_at: Option<u64>,
+    triaged_at: Option<u64>,
+    approved_at: Option<u64>,
+    closed_at: Option<u64>,
+    updated_at: Option<u64>,
 }
 
 #[app::logic]
@@ -281,15 +300,41 @@ impl AppState {
 
         let status = BountyStatusLite::from(&bounty.status);
 
+        let labels = bounty.labels.iter()?.collect();
+        let reviewers = bounty.reviewers.iter()?.collect();
+        let bids = bounty.bids.iter()?.collect();
+        let assignments = bounty.assignments.iter()?.collect();
+        let children = bounty.children.iter()?.collect();
+
         Ok(BountyView {
             id: bounty_id,
             title: bounty.title,
             author: bounty.author,
             message: bounty.message,
+
             award: bounty.award,
             status,
             is_epic: bounty.is_epic,
             deadline: bounty.deadline,
+
+            labels,
+            reviewers,
+
+            bids,
+            assignments,
+
+            parent: bounty.parent,
+            children,
+
+            triaged_by: bounty.triaged_by,
+            approved_by: bounty.approved_by,
+            closed_by: bounty.closed_by,
+
+            proposed_at: bounty.proposed_at,
+            triaged_at: bounty.triaged_at,
+            approved_at: bounty.approved_at,
+            closed_at: bounty.closed_at,
+            updated_at: bounty.updated_at,
         })
     }
 }
