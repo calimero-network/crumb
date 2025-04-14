@@ -1,7 +1,10 @@
+use std::collections::BTreeSet;
+
 use calimero_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use calimero_sdk::serde::{Deserialize, Serialize};
 use calimero_sdk::{app, env};
 use calimero_storage::collections::{UnorderedMap, UnorderedSet};
+use thiserror::Error;
 
 use crate::assignment::AssignmentId;
 use crate::bid::BidId;
@@ -63,14 +66,70 @@ pub enum ClosureReason {
     Expired,
 }
 
+#[derive(Debug, Error, Serialize)]
+#[serde(crate = "calimero_sdk::serde")]
+#[serde(tag = "kind", content = "data")]
+pub enum Error {
+    #[error("bounty title too long ({actual} > {expected})")]
+    BountyTitleTooLong { actual: usize, expected: usize },
+    #[error("bounty description too long ({actual} > {expected})")]
+    BountyDescriptionTooLong { actual: usize, expected: usize },
+    #[error("bounty reviewers limit exceeded (max {max})")]
+    BountyReviewersLimitExceeded { max: usize },
+    #[error("bounty labels limit exceeded (max {max})")]
+    BountyLabelsLimitExceeded { max: usize },
+}
+
+fn validate_bounty_title(title: &str) -> app::Result<()> {
+    if title.len() > MAX_BOUNTY_TITLE_LENGTH {
+        app::bail!(Error::BountyTitleTooLong {
+            actual: title.len(),
+            expected: MAX_BOUNTY_TITLE_LENGTH,
+        });
+    }
+
+    Ok(())
+}
+
+fn validate_bounty_description(description: &str) -> app::Result<()> {
+    if description.len() > MAX_BOUNTY_DESCRIPTION_LENGTH {
+        app::bail!(Error::BountyDescriptionTooLong {
+            actual: description.len(),
+            expected: MAX_BOUNTY_DESCRIPTION_LENGTH,
+        });
+    }
+
+    Ok(())
+}
+
+fn validate_increment_bounty_reviewers(reviewers_count: usize) -> app::Result<()> {
+    if reviewers_count > MAX_NUMBER_OF_REQUIRED_REVIEWS {
+        app::bail!(Error::BountyReviewersLimitExceeded {
+            max: MAX_NUMBER_OF_REQUIRED_REVIEWS,
+        });
+    }
+
+    Ok(())
+}
+
+fn validate_bounty_labels(labels_count: usize) -> app::Result<()> {
+    if labels_count > MAX_NUMBER_OF_LABELS {
+        app::bail!(Error::BountyLabelsLimitExceeded {
+            max: MAX_NUMBER_OF_LABELS,
+        });
+    }
+
+    Ok(())
+}
+
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "calimero_sdk::serde")]
 pub struct CreateBountyRequest {
     pub is_epic: bool,
     pub title: String,
     pub description: String,
-    pub reviewers: Vec<UserId>,
-    pub labels: Vec<LabelId>,
+    pub reviewers: BTreeSet<UserId>,
+    pub labels: BTreeSet<LabelId>,
     pub award: Option<u128>,
     pub deadline: Option<u64>,
     pub parent: Option<BountyId>,
@@ -82,6 +141,11 @@ impl AppState {
         let user_id = self.current_user();
 
         let mut user = self.get_registered_user(&user_id)?;
+
+        validate_bounty_title(&request.title)?;
+        validate_bounty_description(&request.description)?;
+        validate_increment_bounty_reviewers(request.reviewers.len())?;
+        validate_bounty_labels(request.labels.len())?;
 
         let bounty_id = unique(|| BountyId::random(), |id| self.bounties.contains(id))?;
 
