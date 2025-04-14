@@ -74,9 +74,9 @@ pub struct CreateBountyRequest {
 #[app::logic]
 impl AppState {
     pub fn create_bounty(&mut self, request: CreateBountyRequest) -> app::Result<BountyId> {
-        let author = self.current_user();
+        let user_id = self.current_user();
 
-        self.ensure_registered_user(&author)?;
+        let mut user = self.get_registered_user(&user_id)?;
 
         let bounty_id = unique(|| BountyId::random(), |id| self.bounties.contains(id))?;
 
@@ -108,7 +108,10 @@ impl AppState {
             updated_at: Some(now),
         };
 
-        let _ignored = self.bounties.insert(bounty_id, bounty);
+        let _ignored = user.bounties.insert(bounty_id)?;
+
+        let _ignored = self.users.insert(user_id, user)?;
+        let _ignored = self.bounties.insert(bounty_id, bounty)?;
 
         Ok(bounty_id)
     }
