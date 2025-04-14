@@ -41,11 +41,15 @@ pub struct UserRemarks {
 #[derive(Debug, Error, Serialize)]
 #[serde(crate = "calimero_sdk::serde")]
 #[serde(tag = "kind", content = "data")]
-pub enum UserError {
+pub enum Error {
     #[error("user is not registered")]
-    NotRegistered,
+    UserNotRegistered,
     #[error("user is already registered")]
-    AlreadyRegistered,
+    UserAlreadyRegistered,
+    #[error("username cannot be empty")]
+    UserNameEmpty,
+    #[error("username is too long")]
+    UserNameTooLong,
 }
 
 static EXECUTOR_ID: LazyLock<UserId> = std::sync::LazyLock::new(|| UserId::new(env::executor_id()));
@@ -57,7 +61,7 @@ impl AppState {
 
     pub fn ensure_registered_user(&self, user_id: &UserId) -> app::Result<()> {
         if !self.users.contains(user_id)? {
-            app::bail!(UserError::NotRegistered);
+            app::bail!(Error::UserNotRegistered);
         }
 
         Ok(())
@@ -65,11 +69,23 @@ impl AppState {
 
     pub fn get_registered_user(&self, user_id: &UserId) -> app::Result<User> {
         let Some(user) = self.users.get(user_id)? else {
-            app::bail!(UserError::NotRegistered);
+            app::bail!(Error::UserNotRegistered);
         };
 
         Ok(user)
     }
+}
+
+fn validate_user_name(name: &str) -> app::Result<()> {
+    if name.is_empty() {
+        app::bail!(Error::UserNameEmpty);
+    }
+
+    if name.len() > 40 {
+        app::bail!(Error::UserNameTooLong);
+    }
+
+    Ok(())
 }
 
 #[app::logic]
@@ -83,7 +99,11 @@ impl AppState {
         let user_id = self.current_user();
 
         if self.users.contains(&user_id)? {
-            app::bail!(UserError::AlreadyRegistered);
+            app::bail!(Error::UserAlreadyRegistered);
+        }
+
+        if let Some(name) = &name {
+            validate_user_name(name)?;
         }
 
         let skills = skills.into_iter().collect();
@@ -135,7 +155,11 @@ impl AppState {
 
         if let Some(op) = delta.name {
             match op {
-                DeltaOperation::Add(name) => user.name = Some(name),
+                DeltaOperation::Add(name) => {
+                    validate_user_name(&name)?;
+
+                    user.name = Some(name)
+                }
                 DeltaOperation::Remove(_) => user.name = None,
             }
         }
@@ -177,7 +201,7 @@ impl AppState {
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "calimero_sdk::serde")]
-pub struct UserBrief {
+pub struct UserViewBrief {
     pub id: UserId,
     pub name: Option<String>,
     // pub rank: Option<u32>,
@@ -185,7 +209,7 @@ pub struct UserBrief {
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "calimero_sdk::serde")]
-pub struct UserLite {
+pub struct UserView {
     pub id: UserId,
     pub name: Option<String>,
     pub skills: Vec<String>,
@@ -199,20 +223,20 @@ pub struct UserLite {
 
 #[app::logic]
 impl AppState {
-    pub fn get_user_brief(&self, user_id: UserId) -> app::Result<Option<UserBrief>> {
+    pub fn get_user_brief(&self, user_id: UserId) -> app::Result<Option<UserViewBrief>> {
         let user = self.users.get(&user_id)?;
 
         let Some(user) = user else {
             return Ok(None);
         };
 
-        Ok(Some(UserBrief {
+        Ok(Some(UserViewBrief {
             id: user_id,
             name: user.name,
         }))
     }
 
-    pub fn get_user_lite(&self, user_id: UserId) -> app::Result<Option<UserLite>> {
+    pub fn get_user(&self, user_id: UserId) -> app::Result<Option<UserView>> {
         let user = self.users.get(&user_id)?;
 
         let Some(user) = user else {
@@ -226,7 +250,7 @@ impl AppState {
         let bounties = user.bounties.iter()?;
         let messages = user.messages.iter()?;
 
-        Ok(Some(UserLite {
+        Ok(Some(UserView {
             id: user_id,
             name: user.name,
             skills: skills.take(3).collect(),
