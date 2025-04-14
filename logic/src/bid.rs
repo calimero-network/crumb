@@ -4,6 +4,7 @@ use calimero_sdk::app;
 use calimero_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use calimero_sdk::serde::{Deserialize, Serialize};
 use calimero_storage::collections::UnorderedMap;
+use thiserror::Error;
 
 use crate::assignment::AssignmentId;
 use crate::bounty::BountyId;
@@ -14,6 +15,9 @@ use crate::utils::unique;
 use crate::AppState;
 
 id::define!(pub BidId<8, 12>);
+
+const MAX_BID_BRIEF_LENGTH: usize = 2_000;
+const MAX_BID_REWARD_RECIPIENTS: usize = 50;
 
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]
@@ -42,6 +46,38 @@ pub enum BidStatus {
     Retracted { reason: Option<String> },
 }
 
+#[derive(Debug, Error, Serialize)]
+#[serde(crate = "calimero_sdk::serde")]
+#[serde(tag = "kind", content = "data")]
+pub enum Error {
+    #[error("brief too long ({got} > {max})")]
+    BriefTooLong { got: usize, max: usize },
+    #[error("too many reward recipients ({got} > {max})")]
+    TooManyRewardRecipients { got: usize, max: usize },
+}
+
+fn validate_bid_brief(brief: &str) -> app::Result<()> {
+    if brief.len() > MAX_BID_BRIEF_LENGTH {
+        app::bail!(Error::BriefTooLong {
+            got: brief.len(),
+            max: MAX_BID_BRIEF_LENGTH,
+        });
+    }
+
+    Ok(())
+}
+
+fn validate_bid_reward(reward_count: usize) -> app::Result<()> {
+    if reward_count > MAX_BID_REWARD_RECIPIENTS {
+        app::bail!(Error::TooManyRewardRecipients {
+            got: reward_count,
+            max: MAX_BID_REWARD_RECIPIENTS,
+        });
+    }
+
+    Ok(())
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(crate = "calimero_sdk::serde")]
 pub struct CreateBidRequest {
@@ -58,6 +94,9 @@ impl AppState {
         let user_id = self.current_user();
 
         let mut user = self.get_registered_user(&user_id)?;
+
+        validate_bid_brief(&request.brief)?;
+        validate_bid_reward(request.reward.len())?;
 
         let bid_id = unique(|| BidId::random(), |id| self.bids.contains(id))?;
 
