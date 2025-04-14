@@ -46,9 +46,11 @@ pub struct Reaction {
 #[derive(Debug, Error, Serialize)]
 #[serde(crate = "calimero_sdk::serde")]
 #[serde(tag = "kind", content = "data")]
-pub enum MessageError {
+pub enum Error {
+    #[error("parent message not found: {0}")]
+    ParentMessageNotFound(MessageId),
     #[error("message target not found: {0:?}")]
-    TargetNotFound(MessageTarget),
+    MessageTargetNotFound(MessageTarget),
 }
 
 impl AppState {
@@ -71,6 +73,16 @@ impl AppState {
             reactions: UnorderedMap::new(),
             comments: UnorderedSet::new(),
         };
+
+        if let MessageTarget::Message(parent_id) = message.target {
+            let Some(mut parent) = self.messages.get(&parent_id)? else {
+                app::bail!(Error::ParentMessageNotFound(parent_id));
+            };
+
+            let _ignored = parent.comments.insert(message_id)?;
+
+            let _ignored = self.messages.insert(parent_id, parent)?;
+        }
 
         let _ignored = user.messages.insert(message_id)?;
 
