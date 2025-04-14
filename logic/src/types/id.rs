@@ -164,6 +164,20 @@ where
 #[doc(hidden)]
 pub unsafe trait IdTransmute<const N: usize> {}
 
+#[doc(hidden)]
+pub mod __private {
+    pub use core::fmt;
+    pub use core::ops::Deref;
+    pub use core::prelude::v1::{
+        AsRef, Clone, Copy, Debug, Eq, From, Ord, PartialEq, PartialOrd, Result,
+    };
+    pub use core::str::FromStr;
+
+    pub use bs58;
+    pub use calimero_sdk::borsh::{BorshDeserialize, BorshSerialize};
+    pub use calimero_sdk::serde::{Deserialize, Serialize};
+}
+
 macro_rules! define {
     ($name:ident < $len:literal $(, $str:literal )? >) => {
         $crate::types::id::define!(@ () $name < $len $(, $str )? >);
@@ -173,17 +187,17 @@ macro_rules! define {
     };
     (@ ( $($vis:tt)* ) $name:ident < $len:literal $(, $str:literal )? >) => {
         #[derive(
-            ::core::cmp::Eq,
-            ::core::cmp::Ord,
-            ::core::marker::Copy,
-            ::core::clone::Clone,
-            ::core::fmt::Debug,
-            ::core::cmp::PartialEq,
-            ::core::cmp::PartialOrd,
-            ::calimero_sdk::serde::Serialize,
-            ::calimero_sdk::serde::Deserialize,
-            ::calimero_sdk::borsh::BorshSerialize,
-            ::calimero_sdk::borsh::BorshDeserialize,
+            $crate::types::id::__private::Eq,
+            $crate::types::id::__private::Ord,
+            $crate::types::id::__private::Copy,
+            $crate::types::id::__private::Clone,
+            $crate::types::id::__private::Debug,
+            $crate::types::id::__private::PartialEq,
+            $crate::types::id::__private::PartialOrd,
+            $crate::types::id::__private::Serialize,
+            $crate::types::id::__private::Deserialize,
+            $crate::types::id::__private::BorshSerialize,
+            $crate::types::id::__private::BorshDeserialize,
         )]
         #[borsh(crate = "::calimero_sdk::borsh")]
         #[serde(crate = "::calimero_sdk::serde")]
@@ -192,15 +206,19 @@ macro_rules! define {
 
         impl $name {
             pub const fn new(id: [u8; $len]) -> Self {
+                Self::from_id($crate::types::id::Id::new(id))
+            }
+
+            const fn from_id(id: $crate::types::id::Id::< $len $(, $str)? >) -> Self {
                 type DefinedId = $crate::types::id::Id::< $len $(, $str)? >;
 
                 let _guard = DefinedId::SIZE_GUARD;
 
-                Self($crate::types::id::Id::new(id))
+                Self(id)
             }
         }
 
-        impl ::core::ops::Deref for $name {
+        impl $crate::types::id::__private::Deref for $name {
             type Target = $crate::types::id::Id< $len $(, $str)? >;
 
             fn deref(&self) -> &Self::Target {
@@ -208,15 +226,35 @@ macro_rules! define {
             }
         }
 
-        impl ::core::convert::AsRef<[u8]> for $name {
+        impl $crate::types::id::__private::AsRef<[u8]> for $name {
             fn as_ref(&self) -> &[u8] {
-                self.0.as_ref()
+                $crate::types::id::__private::AsRef::as_ref(&self.0)
             }
         }
 
-        impl ::core::convert::From<[u8; $len]> for $name {
+        impl $crate::types::id::__private::From<[u8; $len]> for $name {
             fn from(id: [u8; $len]) -> Self {
                 Self::new(id)
+            }
+        }
+
+        impl $crate::types::id::__private::fmt::Display for $name {
+            fn fmt(
+                &self,
+                f: &mut $crate::types::id::__private::fmt::Formatter<'_>
+            ) -> $crate::types::id::__private::fmt::Result {
+                $crate::types::id::__private::fmt::Display::fmt(&self.0, f)
+            }
+        }
+
+        impl $crate::types::id::__private::FromStr for $name {
+            type Err = $crate::types::id::__private::bs58::decode::Error;
+
+            fn from_str(s: &str) -> $crate::types::id::__private::Result<Self, Self::Err> {
+                $crate::types::id::__private::Result::map(
+                    $crate::types::id::__private::FromStr::from_str(s),
+                    Self::from_id
+                )
             }
         }
 
