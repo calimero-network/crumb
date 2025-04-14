@@ -14,6 +14,10 @@ use crate::AppState;
 
 id::define!(pub UserId<32, 44>);
 
+const MAX_USER_NAME_LENGTH: usize = 40;
+const MAX_USER_SKILL_LENGTH: usize = 20;
+const MAX_USER_LINK_LENGTH: usize = 200;
+
 #[derive(Debug, BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "calimero_sdk::borsh")]
 pub struct User {
@@ -48,12 +52,20 @@ pub enum Error<'a> {
     UserAlreadyRegistered,
     #[error("username cannot be empty")]
     UserNameCannotBeEmpty,
-    #[error("username is too long")]
-    UserNameTooLong,
-    #[error("user skill is too long: {0}")]
-    UserSkillTooLong(&'a str),
-    #[error("user link is too long: {0}")]
-    UserLinkTooLong(&'a str),
+    #[error("username is too long ({actual} > {expected})")]
+    UserNameTooLong { expected: usize, actual: usize },
+    #[error("user skill is too long ({actual} > {expected}): {skill}")]
+    UserSkillTooLong {
+        skill: &'a str,
+        expected: usize,
+        actual: usize,
+    },
+    #[error("user link is too long ({actual} > {expected}): {link}")]
+    UserLinkTooLong {
+        link: &'a str,
+        expected: usize,
+        actual: usize,
+    },
 }
 
 static EXECUTOR_ID: LazyLock<UserId> = std::sync::LazyLock::new(|| UserId::new(env::executor_id()));
@@ -85,24 +97,35 @@ fn validate_user_name(name: &str) -> app::Result<()> {
         app::bail!(Error::UserNameCannotBeEmpty);
     }
 
-    if name.len() > 40 {
-        app::bail!(Error::UserNameTooLong);
+    if name.len() > MAX_USER_NAME_LENGTH {
+        app::bail!(Error::UserNameTooLong {
+            expected: MAX_USER_NAME_LENGTH,
+            actual: name.len(),
+        });
     }
 
     Ok(())
 }
 
 fn validate_skill(skill: &str) -> app::Result<()> {
-    if skill.len() > 20 {
-        app::bail!(Error::UserSkillTooLong(skill));
+    if skill.len() > MAX_USER_SKILL_LENGTH {
+        app::bail!(Error::UserSkillTooLong {
+            skill,
+            expected: MAX_USER_SKILL_LENGTH,
+            actual: skill.len(),
+        });
     }
 
     Ok(())
 }
 
 fn validate_link(link: &str) -> app::Result<()> {
-    if link.len() > 200 {
-        app::bail!(Error::UserLinkTooLong(link));
+    if link.len() > MAX_USER_LINK_LENGTH {
+        app::bail!(Error::UserLinkTooLong {
+            link,
+            expected: MAX_USER_LINK_LENGTH,
+            actual: link.len(),
+        });
     }
 
     Ok(())
